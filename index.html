@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AirOps Campaign Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, Arial, sans-serif; background: #eef8f0; }
+input, select, button { font-family: inherit; outline: none; }
+::-webkit-scrollbar { height: 6px; width: 6px; }
+::-webkit-scrollbar-thumb { background: #d4e8da; }
+</style>
+</head>
+<body>
+<div id="root"><p style="padding:40px;color:#5a7a64">Loading...</p></div>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+const getMonth = d => { const m = String(d).match(/^(\d{1,2})\//); return m ? +m[1] : null; };
+const getYear  = d => { const m = String(d).match(/\/(\d{2,4})$/); return m ? +m[1] : null; };
+const mIdx = n => ["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(String(n).toLowerCase())+1;
+const fmt  = n => (n==null||n==="") ? "" : Number(n).toLocaleString();
+const pct  = n => n==null ? "—" : Number(n).toFixed(1)+"%";
+const parse = v => { const n=Number(String(v).replace(/,/g,"")); return isNaN(n)?0:n; };
+const toDV  = d => { const p=String(d).split("/"); if(p.length===3){const y=p[2].length===2?"20"+p[2]:p[2];return y+"-"+p[0].padStart(2,"0")+"-"+p[1].padStart(2,"0");} return ""; };
+const frDV  = v => { const d=new Date(v+"T00:00:00"); return isNaN(d)?v:(d.getMonth()+1)+"/"+d.getDate()+"/"+String(d.getFullYear()).slice(-2); };
+const MN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const CM = new Date().getMonth()+1;
+const CY = new Date().getFullYear();
+
+const B = {
+  white:"#ffffff", green1:"#eef8f0", green2:"#d6e4d9", green4:"#00c853",
+  green5:"#0a6e2a", green6:"#0a2e14", border:"#d4e8da", muted:"#5a7a64", light:"#8aaa94",
+  pill:"#EEFF8C", pillBdr:"#0a6e2a", accent:"#00e676",
+};
+
+const DC = [
+  { id:1, name:"Synthesia", color:"#0a6e2a", monthlyPlacements:{3:9}, monthlyOpps:{3:12},
+    taskBudgets:[{month:"January",tasks:100000,note:"they use 50k for content refresh"},{month:"February",tasks:100000,note:""},{month:"March",tasks:100000,note:""}],
+    runs:[
+      {id:1,date:"1/21/26",label:"L&D V3",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:315,emailsSent:0,replies:0,contactsUploaded:0},
+      {id:2,date:"2/3/26",label:"AI Avatars V1",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:315,emailsSent:0,replies:0,contactsUploaded:0},
+      {id:3,date:"2/6/26",label:"AI Avatars V2",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:555,emailsSent:0,replies:0,contactsUploaded:0},
+      {id:4,date:"2/12/26",label:"AI Avatars V3",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:1000,emailsSent:124,replies:3,contactsUploaded:0},
+      {id:5,date:"2/17/26",label:"AI Avatars V4",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:850,emailsSent:80,replies:3,contactsUploaded:0},
+      {id:6,date:"2/27/26",label:"AI Avatars V5",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:1000,emailsSent:298,replies:13,contactsUploaded:0},
+      {id:7,date:"3/4/26",label:"PPT to Video AI",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:1000,emailsSent:208,replies:8,contactsUploaded:0},
+      {id:8,date:"3/13/26",label:"PPT to Video AI V2",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:1000,emailsSent:482,replies:20,contactsUploaded:0},
+    ],
+    goals:{placementGoal:10,replyRate:2,linkConv:75,emailsVerified:20,tasksPerRow:50},joinedMonth:1,joinedYear:2026},
+  { id:2, name:"Sanity", color:"#7c1d1d", monthlyPlacements:{3:6}, monthlyOpps:{3:1},
+    taskBudgets:[{month:"January",tasks:75000,note:""},{month:"February",tasks:200000,note:"Updated to 200,000 – Iccha Singh"},{month:"March",tasks:150000,note:"Doubling Task Count"}],
+    runs:[
+      {id:1,date:"1/15/26",label:"Headless CMS / Enterprise",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:323,emailsSent:0,replies:1,contactsUploaded:0},
+      {id:2,date:"2/10/26",label:"AI CMS",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:550,emailsSent:0,replies:2,contactsUploaded:0},
+      {id:3,date:"2/12/26",label:"AI CMS V2",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:500,emailsSent:96,replies:1,contactsUploaded:0},
+      {id:4,date:"2/18/26",label:"AI CMS V3",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:450,emailsSent:65,replies:0,contactsUploaded:0},
+      {id:5,date:"2/25/26",label:"AI CMS V4",avgTaskPerFlow:25,tasksPerEmail:42,totalRows:5000,emailsSent:179,replies:4,contactsUploaded:0},
+      {id:6,date:"3/4/26",label:"Power Anything",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:1000,emailsSent:492,replies:9,contactsUploaded:0},
+      {id:7,date:"3/12/26",label:"Power Anything V2 N8N R.",avgTaskPerFlow:30,tasksPerEmail:50,totalRows:479,emailsSent:96,replies:1,contactsUploaded:0},
+      {id:8,date:"3/16/26",label:"29k Pt.1",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:4000,emailsSent:256,replies:5,contactsUploaded:0},
+      {id:9,date:"3/16/26",label:"29k Pt.2",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:1000,emailsSent:320,replies:8,contactsUploaded:0},
+      {id:10,date:"3/18/26",label:"29k Pt.3",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:6631,emailsSent:692,replies:7,contactsUploaded:1184},
+      {id:11,date:"3/19/26",label:"29k Pt.4",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:5001,emailsSent:545,replies:5,contactsUploaded:1186},
+      {id:12,date:"3/20/26",label:"29k Pt.5",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:5001,emailsSent:270,replies:0,contactsUploaded:1200},
+    ],
+    goals:{placementGoal:50,replyRate:3,linkConv:75,emailsVerified:20,tasksPerRow:50},joinedMonth:1,joinedYear:2026},
+  { id:3, name:"Zola", color:"#1a4731", monthlyPlacements:{3:1}, monthlyOpps:{3:0},
+    taskBudgets:[{month:"January",tasks:175000,note:""},{month:"February",tasks:175000,note:""},{month:"March",tasks:175000,note:""}],
+    runs:[
+      {id:1,date:"1/13/26",label:"TEST – 10 prompts + 10 te",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:10,emailsSent:0,replies:0,contactsUploaded:0},
+      {id:2,date:"1/21/26",label:"Vendor Campaign #1",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:2185,emailsSent:628,replies:70,contactsUploaded:0},
+      {id:3,date:"2/2/26",label:"Vendor Campaign #2",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:100,emailsSent:214,replies:22,contactsUploaded:0},
+      {id:4,date:"2/13/26",label:"TEST",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:77,emailsSent:0,replies:0,contactsUploaded:0},
+      {id:5,date:"2/23/26",label:"Vendor Mini Campaign",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:125,emailsSent:23,replies:0,contactsUploaded:0},
+      {id:6,date:"3/13/26",label:"Vendor Mini Campaign 2",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:500,emailsSent:7,replies:0,contactsUploaded:0},
+    ],
+    goals:{placementGoal:50,replyRate:2,linkConv:75,emailsVerified:20,tasksPerRow:50},joinedMonth:1,joinedYear:2026},
+  { id:4, name:"AirOps", color:"#1a3d6b", monthlyPlacements:{3:1}, monthlyOpps:{3:4},
+    taskBudgets:[{month:"March",tasks:100000,note:""}],
+    runs:[
+      {id:1,date:"3/12/26",label:"Test Campaign",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:0,emailsSent:224,replies:7,contactsUploaded:0},
+      {id:2,date:"3/20/26",label:"Internal Case Study",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:10000,emailsSent:200,replies:0,contactsUploaded:1803},
+    ],
+    goals:{placementGoal:10,replyRate:2,linkConv:75,emailsVerified:20,tasksPerRow:50},joinedMonth:3,joinedYear:2026},
+  { id:5, name:"Airbnb", color:"#5a3e00", monthlyPlacements:{3:0}, monthlyOpps:{3:4},
+    taskBudgets:[{month:"March",tasks:100000,note:""}],
+    runs:[
+      {id:1,date:"3/12/26",label:"Test Campaign",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:0,emailsSent:224,replies:10,contactsUploaded:0},
+      {id:2,date:"3/20/26",label:"Internal Case Study",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:10000,emailsSent:160,replies:17,contactsUploaded:1803},
+    ],
+    goals:{placementGoal:10,replyRate:2,linkConv:75,emailsVerified:20,tasksPerRow:50},joinedMonth:3,joinedYear:2026},
+];
+
+const CLIENT_COLORS = ["#0a6e2a","#7c1d1d","#1a4731","#1a3d6b","#5a3e00","#4a1060"];
+const hc = col => ({background:col,padding:"8px 12px",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:10,color:"#fff",border:"1px solid #d4e8da",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:1});
+const cell = {padding:"7px 10px",border:"1px solid #d4e8da",fontSize:12,color:B.green6};
+const inp = {width:"100%",border:"1px solid #d4e8da",padding:"4px 8px",fontSize:12,boxSizing:"border-box",color:B.green6,background:B.white};
+const SL = {fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:1,color:B.light};
+const SEC = {fontFamily:"Georgia,serif",fontWeight:700,fontSize:16,color:B.green6,marginBottom:12};
+
+function Tip({text}) {
+  const [s,set]=useState(false);
+  return <span style={{position:"relative",display:"inline-block",marginLeft:4}}>
+    <span onMouseEnter={()=>set(true)} onMouseLeave={()=>set(false)}
+      style={{cursor:"help",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:9,background:B.pill,border:"1px solid "+B.pillBdr,borderRadius:99,padding:"1px 5px",color:B.green5}}>?</span>
+    {s&&<div style={{position:"absolute",bottom:"120%",left:"50%",transform:"translateX(-50%)",background:B.green6,color:B.white,padding:"8px 12px",fontSize:12,width:220,zIndex:999,lineHeight:1.5,boxShadow:"0 4px 16px rgba(10,46,20,0.25)",border:"1px solid "+B.green5}}>
+      {text}<div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",borderWidth:5,borderStyle:"solid",borderColor:B.green6+" transparent transparent transparent"}}/>
+    </div>}
+  </span>;
+}
+
+function NI({value,onChange}) {
+  const [v,sv]=useState(String(value??0));
+  useEffect(()=>sv(String(value??0)),[value]);
+  return <input style={inp} value={v} onChange={e=>sv(e.target.value)} onBlur={()=>{const n=parse(v);onChange(n);sv(String(n));}} onFocus={e=>e.target.select()}/>;
+}
+
+function Pill({label,color,bg}) {
+  return <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:9,textTransform:"uppercase",letterSpacing:1,background:bg||B.pill,border:"1px solid "+(color||B.pillBdr),borderRadius:99,padding:"2px 8px",color:color||B.pillBdr,display:"inline-block"}}>{label}</span>;
+}
+
+function StatCard({label,value,sub,accent,progress,progressMax,warn,tooltip,editable,onEdit}) {
+  const col=accent||B.green5;
+  const p=progressMax>0?Math.min(progress/progressMax,1):0;
+  const barCol=p>=1?(warn?"#c62828":B.green4):p>=0.8?(warn?"#e65100":B.green4):col;
+  return <div style={{background:B.white,border:"1px solid "+B.border,padding:"16px 18px",flex:1,minWidth:150}}>
+    <div style={{...SL,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>{label}{tooltip&&<Tip text={tooltip}/>}</div>
+    {editable
+      ? <input value={value} onChange={e=>onEdit(parse(e.target.value))} onFocus={e=>e.target.select()}
+          style={{width:90,border:"none",borderBottom:"2px solid "+col,padding:"2px 0",fontSize:24,fontWeight:700,fontFamily:"Georgia,serif",color:B.green6,outline:"none",background:"transparent"}}/>
+      : <div style={{fontSize:24,fontWeight:700,fontFamily:"Georgia,serif",color:B.green6}}>{value}</div>}
+    {sub!=null&&sub!==""&&<div style={{fontSize:11,color:B.muted,marginTop:4}}>{sub}</div>}
+    {progress!==undefined&&<div style={{marginTop:10,background:B.green1,height:4,overflow:"hidden"}}>
+      <div style={{width:(p*100)+"%",height:"100%",background:barCol,transition:"width 0.4s"}}/>
+    </div>}
+  </div>;
+}
+
+function getMonthsSince(jm,jy) {
+  const out=[]; let m=jm,y=jy;
+  while(y<CY||(y===CY&&m<=CM)){out.push({month:m,year:y,label:MN[m-1]+" "+y});m++;if(m>12){m=1;y++;}}
+  return out;
+}
+
+function MonthlyReport({clients}) {
+  return <div style={{padding:"40px 50px",maxWidth:1100,margin:"0 auto",background:B.white,minHeight:"100vh"}}>
+    <div style={{borderBottom:"1px solid "+B.border,paddingBottom:20,marginBottom:32}}>
+      <h2 style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:22,color:B.green6,marginBottom:6}}>Monthly Report</h2>
+      <p style={{fontSize:14,color:B.muted}}>Placement opportunity goal performance since each client joined.</p>
+    </div>
+    {clients.map(client=>{
+      const months=getMonthsSince(client.joinedMonth||1,client.joinedYear||CY);
+      const goal=client.goals?.placementGoal||0;
+      const completed=months.filter(({month,year})=>year<CY||(year===CY&&month<CM));
+      const metCount=completed.filter(({month})=>((client.monthlyOpps||{})[month]||0)>=goal).length;
+      const rate=completed.length>0?Math.round(metCount/completed.length*100):0;
+      return <div key={client.id} style={{marginBottom:36,border:"1px solid "+B.border}}>
+        <div style={{background:client.color,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <span style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:17,color:B.white}}>{client.name}</span>
+            <Pill label={"Goal: "+goal+" opps/mo"} color={B.pill} bg="rgba(255,255,255,0.15)"/>
+          </div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,0.8)"}}>{metCount}/{completed.length} months met · <span style={{color:B.pill,fontWeight:700}}>{rate}% success</span></div>
+        </div>
+        <div style={{padding:"20px 20px 4px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:8,marginBottom:16}}>
+            {months.map(({month,year,label})=>{
+              const opps=(client.monthlyOpps||{})[month]||0;
+              const live=(client.monthlyPlacements||{})[month]||0;
+              const isCurrent=month===CM&&year===CY;
+              const isFuture=year>CY||(year===CY&&month>CM);
+              const met=!isFuture&&opps>=goal;
+              return <div key={label} style={{background:isFuture?B.green1:met?B.green1:"#fff5f5",border:"1px solid "+(isFuture?B.border:met?B.green4:"#f87171"),padding:"12px 14px"}}>
+                <div style={{...SL,marginBottom:6,fontSize:9}}>{label}{isCurrent&&<span style={{marginLeft:6,background:B.pill,border:"1px solid "+B.pillBdr,borderRadius:99,padding:"1px 6px",fontSize:8,color:B.green5,fontFamily:"'DM Mono',monospace",fontWeight:700,textTransform:"uppercase"}}>NOW</span>}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:4}}>
+                  <span style={{fontSize:22,fontWeight:700,fontFamily:"Georgia,serif",color:isFuture?B.light:met?B.green5:"#b91c1c"}}>{isFuture?"—":opps}</span>
+                  <span style={{fontSize:11,color:B.light}}>/ {goal}</span>
+                </div>
+                {!isFuture&&live>0&&<div style={{fontSize:11,color:B.muted,marginBottom:6}}>{live} live</div>}
+                {!isFuture&&goal>0&&<div style={{background:B.green2,height:3,marginBottom:8}}>
+                  <div style={{width:Math.min(opps/goal,1)*100+"%",height:"100%",background:met?B.green4:"#f87171"}}/>
+                </div>}
+                {!isFuture&&<Pill label={met?"✓ Met":"✗ Missed"} color={met?B.green5:"#b91c1c"} bg={met?B.pill:"#fee2e2"}/>}
+                {isFuture&&<Pill label="Upcoming" color={B.light} bg={B.green2}/>}
+              </div>;
+            })}
+          </div>
+        </div>
+        {completed.length>0&&<div style={{borderTop:"1px solid "+B.border,padding:"10px 20px",display:"flex",gap:28,background:B.green1}}>
+          {[["Total Opps",completed.reduce((s,{month})=>s+((client.monthlyOpps||{})[month]||0),0)],["Months Met",metCount+"/"+completed.length],["Success Rate",rate+"%"],["Placements Live",completed.reduce((s,{month})=>s+((client.monthlyPlacements||{})[month]||0),0)]].map(([k,v])=>
+            <div key={k}><span style={{...SL,fontSize:9}}>{k}: </span><span style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:13,color:B.green6}}>{v}</span></div>
+          )}
+        </div>}
+      </div>;
+    })}
+    <div style={{marginTop:40,textAlign:"right",fontSize:11,color:B.light}}>AirOps Campaign Tracker</div>
+  </div>;
+}
+
+function App() {
+  const [clients,sc]=useState(()=>{try{const s=localStorage.getItem("ct_v7");return s?JSON.parse(s):DC;}catch{return DC;}});
+  const [aid,sa]=useState(clients[0]?.id);
+  const [saveStatus,setSS]=useState("idle");
+  const [selMonth,setSM]=useState(CM);
+  const [activeTab,setTab]=useState("tracker");
+
+  const saveData=data=>{sc(data);setSS("saving");try{localStorage.setItem("ct_v7",JSON.stringify(data));setSS("saved");setTimeout(()=>setSS("idle"),2000);}catch{setSS("error");setTimeout(()=>setSS("idle"),3000);}};
+
+  const ai=clients.findIndex(c=>c.id===aid);
+  const cl=clients[ai]||clients[0];
+  const color=cl.color;
+
+  const upd=patch=>saveData(clients.map((c,i)=>i===ai?{...c,...patch}:c));
+  const uRun=(id,f,v)=>upd({runs:cl.runs.map(r=>r.id===id?{...r,[f]:v}:r)});
+  const aRun=()=>upd({runs:[...cl.runs,{id:Date.now(),date:"",label:"",avgTaskPerFlow:50,tasksPerEmail:83,totalRows:0,emailsSent:0,replies:0,contactsUploaded:0}]});
+  const dRun=id=>upd({runs:cl.runs.filter(r=>r.id!==id)});
+  const uBud=(i,f,v)=>upd({taskBudgets:cl.taskBudgets.map((b,j)=>j===i?{...b,[f]:v}:b)});
+  const aBud=()=>upd({taskBudgets:[...cl.taskBudgets,{month:"",tasks:100000,note:""}]});
+  const dBud=i=>upd({taskBudgets:cl.taskBudgets.filter((_,j)=>j!==i)});
+  const uGoal=(k,v)=>upd({goals:{...cl.goals,[k]:v}});
+  const setMP=(m,v)=>upd({monthlyPlacements:{...(cl.monthlyPlacements||{}),[m]:v}});
+  const setMO=(m,v)=>upd({monthlyOpps:{...(cl.monthlyOpps||{}),[m]:v}});
+  const aClient=()=>{const i=clients.length%CLIENT_COLORS.length;const n={id:Date.now(),name:"New Client",color:CLIENT_COLORS[i],monthlyPlacements:{},monthlyOpps:{},taskBudgets:[{month:MN[CM-1],tasks:100000,note:""}],runs:[],goals:{placementGoal:10,replyRate:2,linkConv:75,emailsVerified:20,tasksPerRow:50},joinedMonth:CM,joinedYear:CY};saveData([...clients,n]);sa(n.id);};
+  const dClient=id=>{const r=clients.filter(c=>c.id!==id);saveData(r);sa(r[0]?.id);};
+
+  const {placementGoal,replyRate,linkConv,emailsVerified,tasksPerRow}=cl.goals;
+  const eNeed=Math.ceil(placementGoal/(replyRate/100)/(linkConv/100));
+  const rBefore=Math.ceil(eNeed/(emailsVerified/100));
+  const tNeed=Math.ceil(rBefore*tasksPerRow);
+  const mBud=cl.taskBudgets.find(b=>mIdx(b.month)===selMonth);
+  const mTask=mBud?.tasks||0;
+  const mRuns=cl.runs.filter(r=>getMonth(r.date)===selMonth);
+  const tES=mRuns.reduce((s,r)=>s+(r.emailsSent||0),0);
+  const tRR=mRuns.reduce((s,r)=>s+(r.totalRows||0),0);
+  const tTU=mRuns.reduce((s,r)=>s+(r.avgTaskPerFlow||0)*(r.totalRows||0),0);
+  const tRep=mRuns.reduce((s,r)=>s+(r.replies||0),0);
+  const tCU=mRuns.reduce((s,r)=>s+(r.contactsUploaded||0),0);
+  const tPl=(cl.monthlyPlacements||{})[selMonth]||0;
+  const tOp=(cl.monthlyOpps||{})[selMonth]||0;
+  const aHR=tRR>0?(tCU/tRR)*100:null;
+  const oRR=tES>0?(tRep/tES)*100:null;
+  const today=new Date();
+  const dim=new Date(today.getFullYear(),selMonth,0).getDate();
+  const dom=selMonth===CM?today.getDate():dim;
+  const mp=dom/dim;
+  const plPct=placementGoal>0?(tOp/placementGoal)*100:0;
+  const health=plPct>=100?{label:"Goal Achieved 🎉",color:B.green5,bg:B.green1,border:B.green4}
+    :plPct>=mp*100*0.9?{label:"On Track ✓",color:B.green5,bg:B.green1,border:B.green4}
+    :plPct>=mp*100*0.6?{label:"Slightly Behind",color:"#92400e",bg:"#fffbeb",border:"#fbbf24"}
+    :{label:"Behind Pace ⚠",color:"#991b1b",bg:"#fff1f2",border:"#f87171"};
+
+  return <div style={{fontFamily:"Inter,sans-serif",minHeight:"100vh",background:B.green1}}>
+    <div style={{background:B.green6,padding:"0 50px",display:"flex",alignItems:"center",borderBottom:"1px solid "+B.green5,overflowX:"auto"}}>
+      <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:10,color:B.light,marginRight:20,textTransform:"uppercase",letterSpacing:2,whiteSpace:"nowrap"}}>AirOps / Campaign Tracker</span>
+      {clients.map(c=><div key={c.id} onClick={()=>{sa(c.id);setTab("tracker");}}
+        style={{display:"flex",alignItems:"center",gap:7,padding:"14px 18px",cursor:"pointer",borderBottom:aid===c.id&&activeTab==="tracker"?"2px solid "+B.accent:"2px solid transparent",transition:"all 0.15s"}}>
+        <div style={{width:7,height:7,background:c.color,border:"1px solid "+B.green4}}/>
+        <span style={{color:aid===c.id&&activeTab==="tracker"?B.white:B.light,fontWeight:aid===c.id&&activeTab==="tracker"?600:400,fontSize:13,whiteSpace:"nowrap"}}>{c.name}</span>
+        {clients.length>1&&<span onClick={e=>{e.stopPropagation();dClient(c.id);}} style={{color:B.muted,fontSize:14,marginLeft:2,cursor:"pointer"}}>×</span>}
+      </div>)}
+      <button onClick={aClient} style={{marginLeft:6,background:"transparent",border:"1px solid "+B.green5,color:B.light,padding:"4px 12px",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:1}}>+ Client</button>
+      <div onClick={()=>setTab("report")} style={{display:"flex",alignItems:"center",gap:6,padding:"14px 18px",cursor:"pointer",borderBottom:activeTab==="report"?"2px solid "+B.accent:"2px solid transparent",marginLeft:8}}>
+        <span style={{color:activeTab==="report"?B.accent:B.light,fontWeight:activeTab==="report"?600:400,fontSize:13}}>Monthly Report</span>
+      </div>
+      <div style={{marginLeft:"auto",paddingLeft:16}}>
+        <button onClick={()=>saveData(clients)} style={{background:saveStatus==="saved"?B.green4:saveStatus==="error"?"#c62828":B.green5,border:"none",color:B.white,padding:"6px 18px",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:1}}>
+          {saveStatus==="saving"?"Saving…":saveStatus==="saved"?"✓ Saved":saveStatus==="error"?"✗ Error":"Save"}
+        </button>
+      </div>
+    </div>
+
+    {activeTab==="report"&&<MonthlyReport clients={clients}/>}
+
+    {activeTab==="tracker"&&<div style={{padding:"40px 50px",maxWidth:1400,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28,flexWrap:"wrap"}}>
+        <div style={{background:color,padding:"8px 18px",border:"1px solid "+B.border}}>
+          <input value={cl.name} onChange={e=>upd({name:e.target.value})} style={{background:"transparent",border:"none",color:B.white,fontWeight:700,fontFamily:"Georgia,serif",fontSize:18,outline:"none",width:200}}/>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={SL}>Placement Opp Goal:</span>
+          <div style={{display:"flex",alignItems:"center",gap:6,background:B.white,border:"1px solid "+B.border,padding:"4px 12px"}}>
+            <input value={placementGoal} onChange={e=>uGoal("placementGoal",parse(e.target.value))} onFocus={e=>e.target.select()} style={{width:50,border:"none",fontSize:14,fontWeight:700,fontFamily:"Georgia,serif",color:B.green6,outline:"none",textAlign:"center"}}/>
+            <span style={{...SL,fontSize:9}}>/mo</span>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={SL}>Client since:</span>
+          <select value={cl.joinedMonth||1} onChange={e=>upd({joinedMonth:+e.target.value})} style={{border:"1px solid "+B.border,padding:"4px 10px",fontSize:12,color:B.green6,outline:"none",background:B.white}}>
+            {MN.map((m,i)=><option key={m} value={i+1}>{m}</option>)}
+          </select>
+          <input value={cl.joinedYear||CY} onChange={e=>upd({joinedYear:+e.target.value})} style={{width:70,border:"1px solid "+B.border,padding:"4px 8px",fontSize:12,color:B.green6,outline:"none"}}/>
+        </div>
+      </div>
+
+      <div style={{marginBottom:32}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <div style={SEC}>Where We're Currently At</div>
+          <select value={selMonth} onChange={e=>setSM(+e.target.value)} style={{border:"1px solid "+B.border,padding:"5px 14px",fontSize:12,color:B.green6,fontWeight:600,outline:"none",background:B.white}}>
+            {MN.map((m,i)=><option key={m} value={i+1}>{m}</option>)}
+          </select>
+        </div>
+        <div style={{background:health.bg,border:"1px solid "+health.border,padding:"12px 20px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <span style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:15,color:health.color}}>{health.label}</span>
+            <Pill label={"Day "+dom+"/"+dim+" — "+Math.round(mp*100)+"% through "+MN[selMonth-1]} color={health.color} bg={health.bg}/>
+          </div>
+          <span style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:14,color:health.color}}>{tOp} / {placementGoal} placement opportunities</span>
+        </div>
+        <div style={{...SL,marginBottom:12}}>Actuals This Month</div>
+        <div style={{display:"flex",gap:1,flexWrap:"wrap",marginBottom:1,border:"1px solid "+B.border}}>
+          <StatCard label="Emails Sent" value={fmt(tES)} sub={eNeed>0?Math.round(tES/eNeed*100)+"% of goal ("+fmt(eNeed)+")":"—"} accent={color} progress={tES} progressMax={eNeed} tooltip="Total emails sent vs. emails needed to hit goal."/>
+          <StatCard label="Rows Run" value={fmt(tRR)} sub={rBefore>0?Math.round(tRR/rBefore*100)+"% of goal ("+fmt(rBefore)+")":"—"} accent={color} progress={tRR} progressMax={rBefore} tooltip="Rows processed vs. rows needed before verification."/>
+          <StatCard label="Tasks Used" value={fmt(tTU)} sub={mTask>0?Math.round(tTU/mTask*100)+"% of budget ("+fmt(mTask)+")":"—"} accent={color} progress={tTU} progressMax={mTask} warn tooltip="Tasks consumed vs. monthly budget."/>
+          <StatCard label="Placement Opportunities" value={tOp} sub={placementGoal>0?Math.round(tOp/placementGoal*100)+"% of goal ("+placementGoal+")":"—"} accent={color} progress={tOp} progressMax={placementGoal} editable onEdit={v=>setMO(selMonth,v)} tooltip="Manually enter placement opportunities. Tracked against your goal."/>
+          <StatCard label="Placements Live" value={tPl} sub="" accent={color} editable onEdit={v=>setMP(selMonth,v)} tooltip="Manually enter placements that are live this month."/>
+        </div>
+        <div style={{...SL,marginBottom:12,marginTop:20}}>Verification & Engagement</div>
+        <div style={{display:"flex",gap:1,flexWrap:"wrap",marginBottom:1,border:"1px solid "+B.border}}>
+          <StatCard label="Citations Uploaded" value={fmt(tCU)} sub={tRR>0?Math.round(tCU/tRR*100)+"% of rows run ("+fmt(tRR)+")":"—"} accent={color} progress={tCU} progressMax={tRR} tooltip="Total citations uploaded to Instantly this month."/>
+          <StatCard label="Hit Rate" value={aHR!=null?pct(aHR):"—"} sub="Citations ÷ Rows Run" accent={color} tooltip="Total citations uploaded ÷ total rows run."/>
+          <StatCard label="Tasks Left" value={fmt(mTask-tTU)} sub={mTask>0?Math.round(tTU/mTask*100)+"% of budget used":"—"} accent={mTask-tTU<0?"#c62828":color} tooltip="Remaining task budget for this month."/>
+        </div>
+        <div style={{background:B.white,border:"1px solid "+B.border,padding:"20px 24px",marginTop:16}}>
+          <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:14,color:B.green6,marginBottom:16}}>Monthly Pacing</div>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {[{label:"Placement Opportunity Goal",current:tOp,goal:placementGoal,unit:"opportunities"},{label:"Emails Sent",current:tES,goal:eNeed,unit:"emails"},{label:"Rows Run",current:tRR,goal:rBefore,unit:"rows"},{label:"Tasks Used",current:tTU,goal:mTask,unit:"tasks",warn:true}].map(({label,current,goal,unit,warn})=>{
+              const p=goal>0?Math.min(current/goal,1):0;
+              const bc=p>=1?(warn?"#c62828":B.green4):p>=mp*0.9?B.green4:p>=mp*0.6?"#f59e0b":"#ef4444";
+              return <div key={label}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,alignItems:"center"}}>
+                  <span style={{fontWeight:600,fontSize:12,color:B.green6}}>{label}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:12,color:B.muted}}>{fmt(current)} / {fmt(goal)} {unit}</span>
+                    <Pill label={Math.round(p*100)+"%"} color={bc===B.green4?B.green5:"#7f1d1d"} bg={bc===B.green4?B.pill:"#fee2e2"}/>
+                  </div>
+                </div>
+                <div style={{position:"relative",background:B.green1,height:6}}>
+                  <div style={{width:(p*100)+"%",height:"100%",background:bc,transition:"width 0.4s"}}/>
+                  <div style={{position:"absolute",top:0,left:(mp*100)+"%",width:1.5,height:"100%",background:B.muted,opacity:0.6}}/>
+                </div>
+              </div>;
+            })}
+          </div>
+          <div style={{marginTop:12,fontSize:10,color:B.light}}>▏ grey line = expected pace for today</div>
+        </div>
+      </div>
+
+      <div style={{marginBottom:28}}>
+        <div style={SEC}>Monthly Task Budgets</div>
+        <div style={{border:"1px solid "+B.border,background:B.white}}>
+          <table style={{borderCollapse:"collapse",width:"100%"}}>
+            <thead><tr>{["Month","Total Tasks Available","Note",""].map(h=><th key={h} style={hc(color)}>{h}</th>)}</tr></thead>
+            <tbody>{cl.taskBudgets.map((b,i)=><tr key={i} style={{background:i%2===0?B.green1:B.white}}>
+              <td style={cell}><input value={b.month} onChange={e=>uBud(i,"month",e.target.value)} style={{...inp,width:120}}/></td>
+              <td style={cell}><NI value={b.tasks} onChange={v=>uBud(i,"tasks",v)}/></td>
+              <td style={cell}><input value={b.note} onChange={e=>uBud(i,"note",e.target.value)} style={{...inp,color:B.muted,fontStyle:"italic"}}/></td>
+              <td style={cell}><button onClick={()=>dBud(i)} style={{color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:16}}>×</button></td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <button onClick={aBud} style={{marginTop:8,fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:1,color:color,background:B.white,border:"1px solid "+B.border,padding:"5px 14px",cursor:"pointer"}}>+ Add Month</button>
+      </div>
+
+      <div style={{marginBottom:28}}>
+        <div style={SEC}>Campaign Runs</div>
+        <div style={{border:"1px solid "+B.border,background:B.white,overflowX:"auto"}}>
+          <table style={{borderCollapse:"collapse",width:"100%"}}>
+            <thead><tr>
+              {[["Date","Run date."],["Campaign Label","Campaign name."],["Avg Task/Flow","Avg tasks per row."],["Tasks/Email","Tasks per email."],["Total Rows","Rows processed."],["Total Tasks","Avg Task/Flow × Rows."],["Tasks Left","Budget minus cumulative tasks."],["Emails Sent","Emails sent."],["Replies","Replies received."],["Reply Rate","Replies ÷ Emails Sent."],["Citations Uploaded","Citations uploaded to Instantly."],["Hit Rate","Citations Uploaded ÷ Total Rows."]].map(([h,d])=>
+                <th key={h} style={hc(color)}>{h} <Tip text={d}/></th>
+              )}
+              <th style={hc(color)}></th>
+            </tr></thead>
+            <tbody>{[...cl.runs].reverse().map((r,i)=>{
+              const rm=getMonth(r.date),ry=getYear(r.date);
+              const tt=(r.avgTaskPerFlow||0)*(r.totalRows||0);
+              const bud=cl.taskBudgets.find(b=>mIdx(b.month)===rm);
+              const mb=bud?(bud.tasks||0):0;
+              const sm=cl.runs.filter(x=>getMonth(x.date)===rm&&getYear(x.date)===ry);
+              const cum=sm.slice(0,sm.findIndex(x=>x.id===r.id)+1).reduce((s,x)=>s+(x.avgTaskPerFlow||0)*(x.totalRows||0),0);
+              const tl=mb-cum;
+              const rr=r.emailsSent>0?(r.replies||0)/r.emailsSent*100:null;
+              const hr=r.totalRows>0?(r.contactsUploaded||0)/r.totalRows*100:null;
+              return <tr key={r.id} style={{background:i%2===0?B.green1:B.white}}>
+                <td style={cell}><input type="date" value={toDV(r.date)} onChange={e=>uRun(r.id,"date",frDV(e.target.value))} style={{...inp,width:135}}/></td>
+                <td style={cell}><input value={r.label} onChange={e=>uRun(r.id,"label",e.target.value)} style={{...inp,width:160}}/></td>
+                <td style={cell}><NI value={r.avgTaskPerFlow} onChange={v=>uRun(r.id,"avgTaskPerFlow",v)}/></td>
+                <td style={cell}><NI value={r.tasksPerEmail} onChange={v=>uRun(r.id,"tasksPerEmail",v)}/></td>
+                <td style={cell}><NI value={r.totalRows} onChange={v=>uRun(r.id,"totalRows",v)}/></td>
+                <td style={{...cell,fontWeight:700,color:B.green5,background:B.green1}}>{fmt(tt)}</td>
+                <td style={{...cell,fontWeight:700,color:tl<0?"#c62828":B.green5,background:tl<0?"#fff1f2":B.green1}}>{mb?fmt(tl):<span style={{color:B.light,fontStyle:"italic"}}>no budget</span>}</td>
+                <td style={cell}><NI value={r.emailsSent||0} onChange={v=>uRun(r.id,"emailsSent",v)}/></td>
+                <td style={cell}><NI value={r.replies||0} onChange={v=>uRun(r.id,"replies",v)}/></td>
+                <td style={{...cell,fontWeight:700,background:B.green1,color:rr!=null?(rr>=2?B.green5:"#c62828"):B.light}}>{rr!=null?pct(rr):"—"}</td>
+                <td style={cell}><NI value={r.contactsUploaded||0} onChange={v=>uRun(r.id,"contactsUploaded",v)}/></td>
+                <td style={{...cell,fontWeight:700,background:B.green1,color:hr!=null?B.green5:B.light}}>{hr!=null?pct(hr):"—"}</td>
+                <td style={cell}><button onClick={()=>dRun(r.id)} style={{color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:16}}>×</button></td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+        <button onClick={aRun} style={{marginTop:8,fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:1,color:color,background:B.white,border:"1px solid "+B.border,padding:"5px 14px",cursor:"pointer"}}>+ Add Run</button>
+      </div>
+
+      <div style={{background:B.white,border:"1px solid "+B.border,padding:"24px 28px"}}>
+        <div style={SEC}>Goal Calculator</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
+          <div>
+            <div style={{...SL,marginBottom:12}}>Inputs</div>
+            {[["Client Placement Opp Goal","placementGoal","","Target placement opportunities."],["Reply Rate (%)","replyRate","%","Expected % of recipients who reply."],["Link Conversion Rate (%)","linkConv","%","% of replies that become opportunities."],["% of Emails Verified","emailsVerified","%","% of rows yielding a valid email."],["# of Tasks per AirOps Row","tasksPerRow","","Tasks per row to calculate total cost."]].map(([label,key,suffix,def])=>
+              <div key={key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,borderBottom:"1px solid "+B.green1,paddingBottom:10}}>
+                <span style={{fontSize:12,color:B.green6}}>{label} <Tip text={def}/></span>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <NI value={cl.goals[key]} onChange={v=>uGoal(key,v)}/>
+                  {suffix&&<span style={{...SL,fontSize:9}}>{suffix}</span>}
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <div style={{...SL,marginBottom:12}}>Calculated Outputs</div>
+            {[["# of Emails to Send",eNeed,"Placement Goal ÷ Reply Rate ÷ Link Conv Rate."],["# of Rows Needed (before verification)",rBefore,"Accounts for unverified email drop-off."],["# of Rows Needed (after verification)",eNeed,"Equals emails to send."],["# of Tasks Needed to Hit Goal",tNeed,"Rows (before verification) × Tasks per Row."]].map(([label,val,def])=>
+              <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,background:B.green1,padding:"10px 16px",borderLeft:"3px solid "+B.green4}}>
+                <span style={{fontSize:12,color:B.green6}}>{label} <Tip text={def}/></span>
+                <span style={{fontFamily:"Georgia,serif",fontWeight:700,color:B.green6,fontSize:16}}>{fmt(val)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div style={{marginTop:32,textAlign:"right",fontSize:11,color:B.light}}>AirOps Campaign Tracker</div>
+    </div>}
+  </div>;
+}
+
+ReactDOM.render(<App/>, document.getElementById("root"));
+</script>
+</body>
+</html>
